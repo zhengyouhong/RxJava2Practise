@@ -3,6 +3,8 @@ package com.example.ourydc.rxjava2practise;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 
 import org.reactivestreams.Subscriber;
@@ -31,12 +33,41 @@ import io.reactivex.schedulers.Schedulers;
 public class MainActivity extends AppCompatActivity {
 
     public static final String TAG = "MainActivity";
+    private Flowable<String> mFlowable;
+    private Button mBtnRequest;
+    private Subscription mSubscription;
+    private Button mBtnStart;
+    private Subscriber<String> mSubscriber;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        mBtnRequest = findViewById(R.id.btn_request);
+        mBtnStart = findViewById(R.id.btn_start);
 
+        mBtnRequest.setOnClickListener(v -> {
+            if (mSubscription != null) {
+                mSubscription.request(4);
+            }
+        });
+
+        mBtnStart.setOnClickListener(v -> {
+            if (mSubscriber != null && mFlowable != null) {
+                mFlowable.subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(mSubscriber);
+            }
+        });
+
+//        test();
+
+//        init();
+        init2();
+
+    }
+
+    private void test() {
         Observable.create(new ObservableOnSubscribe<Integer>() {
             @Override
             public void subscribe(ObservableEmitter<Integer> emitter) throws Exception {
@@ -62,42 +93,40 @@ public class MainActivity extends AppCompatActivity {
                 Log.e(TAG, s);
             }
         });
-
-        init();
-        init2();
-
     }
 
     private void init2() {
-        Flowable.create(new FlowableOnSubscribe<String>() {
+        mFlowable = Flowable.create(new FlowableOnSubscribe<String>() {
             @Override
             public void subscribe(FlowableEmitter<String> emitter) throws Exception {
+                for (int i = 0; i < 128; i++) {
+                    emitter.onNext(i + "");
+                }
+                emitter.onComplete();
+            }
+        }, BackpressureStrategy.ERROR);
+        mSubscriber = new Subscriber<String>() {
+            @Override
+            public void onSubscribe(Subscription s) {
+                mSubscription = s;
 
             }
-        }, BackpressureStrategy.ERROR)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Subscriber<String>() {
-                    @Override
-                    public void onSubscribe(Subscription s) {
 
-                    }
+            @Override
+            public void onNext(String s) {
+                Log.e(TAG, s);
+            }
 
-                    @Override
-                    public void onNext(String s) {
+            @Override
+            public void onError(Throwable t) {
 
-                    }
+            }
 
-                    @Override
-                    public void onError(Throwable t) {
+            @Override
+            public void onComplete() {
 
-                    }
-
-                    @Override
-                    public void onComplete() {
-
-                    }
-                });
+            }
+        };
 
     }
 
